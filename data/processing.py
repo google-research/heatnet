@@ -15,7 +15,6 @@ import os
 from typing import List, Tuple, Union, Optional
 
 from absl import logging
-import heatnet.data.cds_era5 as cds
 import heatnet.file_util as file_util
 import netCDF4 as nc
 import numpy as np
@@ -509,12 +508,13 @@ class CDSPreprocessor(object):
         stop = min(start + batch_samples, past_times + n_sample + t_offset)
         return slice(start, stop)
 
-    surface_vars = cds.get_surface_vars(variables)
     var_lev = get_varlev_pairs(variables, levels)
     # Fill in the data. Iterate by variable and level for scaling.
     for vl_index, (vl_var, vl_level) in enumerate(list(zip(variables, levels))):
-      ds_vl = self.raw_ds[vl_var] if vl_var in surface_vars else self.raw_ds[
-          vl_var].sel(level=vl_level)
+      if 'level' not in self.raw_ds[vl_var].coords:
+        ds_vl = self.raw_ds[vl_var]
+      else:
+        ds_vl = self.raw_ds[vl_var].sel(level=vl_level)
       if self.verbose:
         logging.info('Processing variable/level pair %s of %s (%s) in %s.',
                      vl_index + 1, len(var_lev), var_lev[vl_index],
